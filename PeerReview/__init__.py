@@ -7,3 +7,4 @@ r"""
 @Description:
     论文质量评估模块
 """
+from .review import Reviewer

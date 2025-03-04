@@ -7,3 +7,6 @@ r"""
 @Description:
     论文加载模块
 """
+from .absloader import AbPaperLoader
+from .wordloader import WordPaperLoader
+from .pdfloader import PdfPaperLoader

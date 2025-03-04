@@ -11,7 +11,7 @@ r"""
 from os import name
 import time
 import requests
-from absloader import AbPaperLoader
+from .absloader import AbPaperLoader
 import concurrent.futures
 from openai import OpenAI
 import re
@@ -119,6 +119,7 @@ class PdfPaperLoader(AbPaperLoader):
         matches = re.findall(pattern, text)
         for match in matches:
             image_path = match
+            print(self.image_understand_dict.keys())
             image_text = self.image_understand_dict[match] 
             print(f"{image_path}:{image_text}")
             # 替换图片标记为图片中的文本

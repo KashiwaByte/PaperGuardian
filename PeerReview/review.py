@@ -8,9 +8,11 @@ r"""
     评审类
 """
 import os
+import re
 import sys
+import json
 from openai import OpenAI
-from prompt import PROMPT_DICT
+from .prompt import PROMPT_DICT
 
 class Reviewer:
     
@@ -28,7 +30,7 @@ class Reviewer:
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         )
         
-    def read_paper(self, paper, external_knowledge=None, style='Formal'):
+    def read_paper(self, paper, external_knowledge=None, style='Formal', stream:bool=False):
         # 定义允许的风格列表
         allowed_styles = ['Formal', 'Encouraging', 'Sharp', 'Academic']
         # 检查传入的 style 是否在允许的风格列表中
@@ -39,17 +41,29 @@ class Reviewer:
         content = paper
         if external_knowledge:
             content += f"请参考相关资料辅助评价论文，以下是这篇论文的相关资料:{external_knowledge}"
-        completion = self.client.chat.completions.create(
+        if stream:    
+            completion = self.client.chat.completions.create(
 
-                    model=self.model, 
-                    messages=[
-                        {'role': 'system', 'content': system_prompt},
-                        {'role': 'user', 'content': content}],
-                    stream=True,
-                    stream_options={"include_usage": False}
-                )
-        for chunk in completion:
-            print(chunk.model_dump_json())
+                        model=self.model, 
+                        messages=[
+                            {'role': 'system', 'content': system_prompt},
+                            {'role': 'user', 'content': content}],
+                        stream=True,
+                        stream_options={"include_usage": False}
+                    )
+            full_content = ""
+            for chunk in completion:
+                data = json.loads(chunk.model_dump_json())
+                current_content = data["choices"][0]["delta"].get("content", "")
+                print(current_content, end='', flush=True)
+        else:
+            completion = self.client.chat.completions.create(
+                        model=self.model, 
+                        messages=[
+                            {'role': 'system', 'content': system_prompt},
+                            {'role': 'user', 'content': content}],
+                    )
+            print(completion.choices[0].message.content)
     
 
     
@@ -57,5 +71,5 @@ class Reviewer:
     
 
 if __name__ == "__main__":
-    print(PROMPT_DICT.keys())
-    print(PROMPT_DICT["Sharp"])
+    pass
+
