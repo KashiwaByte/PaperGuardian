@@ -51,11 +51,12 @@ class Reviewer:
                         stream=True,
                         stream_options={"include_usage": False}
                     )
-            full_content = ""
-            for chunk in completion:
-                data = json.loads(chunk.model_dump_json())
-                current_content = data["choices"][0]["delta"].get("content", "")
-                print(current_content, end='', flush=True)
+            # full_content = ""
+            # for chunk in completion:
+            #     data = json.loads(chunk.model_dump_json())
+            #     current_content = data["choices"][0]["delta"].get("content", "")
+            #     print(current_content, end='', flush=True)
+            return completion
         else:
             completion = self.client.chat.completions.create(
                         model=self.model, 
@@ -64,6 +65,7 @@ class Reviewer:
                             {'role': 'user', 'content': content}],
                     )
             print(completion.choices[0].message.content)
+            return completion.choices[0].message.content
     
 
     

@@ -33,5 +33,8 @@ To Enable stability of the code， we use ipynb to test some feat in [Folder Tes
 - [ ] External Knowledage module
 
 ### Visual
-- [ ] Gradio GUI
+- [x] Gradio GUI
 - [ ] Modern Frontend GUI
+
+![GUI1.png](https://kashiwa-pic.oss-cn-beijing.aliyuncs.com/20250312185146571.png)
+![GUI2.png](https://kashiwa-pic.oss-cn-beijing.aliyuncs.com/20250312185212377.png)
