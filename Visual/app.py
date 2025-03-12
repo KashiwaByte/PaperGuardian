@@ -7,28 +7,30 @@ r"""
 @Description: 
     论文可视化启动文件
 """
+import os
+from re import T
+import sys
+import json
+from tkinter.tix import Tree
 import gradio as gr
+from dotenv import load_dotenv
 # import spaces
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
-# import torch
-from threading import Thread
 
 
-import traceback
+current_path = os.path.abspath(__file__)
+parent_path = os.path.dirname(current_path)
+sys_path = os.path.dirname(parent_path)
+sys.path.append(sys_path)
+from PeerReview import Reviewer
+from PaperLoader import PdfPaperLoader,  WordPaperLoader
 
 
 
-metadata = {}
+load_dotenv()
+marker_api = os.getenv("MARKER")
+qwen_api = os.getenv("DASHSCOPE_API_KEY")
 
-# # prepare LLM
-# model_name = "maxidl/PaperGuardian"
-# model = AutoModelForCausalLM.from_pretrained(
-#     model_name,
-#     torch_dtype=torch.bfloat16,
-#     device_map="auto"
-# )
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, decode_kwargs=dict(skip_special_tokens=True))
 
 # Define prompts
 SYSTEM_PROMPT_TEMPLATE = """You are an expert reviewer for AI conferences. You follow best practices and review papers according to the reviewer guidelines.
@@ -111,38 +113,33 @@ Please provide an "overall score" for this submission. Choose from the following
 10: strong accept, should be highlighted at the conference
 """
 
+
+
 # functions
-def create_messages(review_fields, paper_text):
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT_TEMPLATE.format(review_fields=review_fields)},
-        {"role": "user", "content": USER_PROMPT_TEMPLATE.format(paper_text=paper_text)},
-    ]
-    return messages
 
 
 def convert_file(filepath):
-    pass
+    marker_api = os.getenv("MARKER")
+    qwen_api = os.getenv("DASHSCOPE_API_KEY")
+    loader = PdfPaperLoader(marker_api)
+    filename = filepath.split("/")[-1]
+    loader.read_paper(filepath,filename)
+    output = loader.convert_paper(vlapi=qwen_api,lang="Chinese")
+    return output
+    
 
-def process_file(file):
-    pass
 
 
-def generate(paper_text, review_template):
-    pass
-    # messages = create_messages(review_template, paper_text)
-    # input_ids = tokenizer.apply_chat_template(
-    #     messages,
-    #     add_generation_prompt=True,
-    #     return_tensors='pt'
-    # ).to(model.device)
-    # print(f"input_ids shape: {input_ids.shape}")
-    # generation_kwargs = dict(input_ids=input_ids, streamer=streamer, max_new_tokens=4096, do_sample=True, temperature=0.6, top_p=0.9)
-    # thread = Thread(target=model.generate, kwargs=generation_kwargs)
-    # thread.start()
-    # generated_text = ""
-    # for new_text in streamer:
-    #     generated_text += new_text
-    #     yield generated_text.replace("<|eot_id|>", "")
+def generate(paper_text, review_style):
+    reviewer = Reviewer(qwen_api, "qwen-plus")
+    completion = reviewer.read_paper(paper_text,style=review_style,stream=True)
+    generated_text = ""
+    for chunk in completion:
+        data = json.loads(chunk.model_dump_json())
+        current_content = data["choices"][0]["delta"].get("content", "")
+        generated_text += current_content
+        yield generated_text
+
 
 
 
@@ -168,22 +165,27 @@ description = """这是一个在线演示，展示的是 PaperGuardian，这是�
 6.若要获得多份评审意见，只需再次点击生成即可。  
 """
 
+
+
 theme = gr.Theme.from_hub("hmb/amethyst")
 # theme = gr.themes.Default(primary_hue="gray", secondary_hue="blue", neutral_hue="slate")
 with gr.Blocks(theme=theme) as demo:
     title = gr.HTML(title)
     description = gr.Markdown(description)
-    file_input = gr.File(file_types=[".pdf"], file_count="single")
-    paper_text_field= gr.Textbox("上传PDF或Word文件或粘贴论文的 Markdown 格式全文。", label="Paper Text", lines=20, max_lines=20, autoscroll=False)
-    with gr.Accordion("评审模版", open=False):
-        review_template_description = gr.Markdown("我们目前提供多种评审模版，你也可以根据需要在下方自行修改")
-        review_template_field = gr.Textbox(label=" ",lines=20, max_lines=20, autoscroll=False, value=REVIEW_FIELDS)
+    file_input = gr.File(file_types=[".pdf",".docx"], file_count="single")
+    paper_text_field= gr.Textbox("上传PDF或Word文件或粘贴论文的 Markdown 格式全文。", label="Paper Text", lines=20, max_lines=20, autoscroll=False,show_copy_button=True)
+    review_style =  gr.Dropdown(
+            ["Formal", "Encouraging", "Sharp","Academic"], label="评审风格", info="请选择你需要的评审风格")
+    # with gr.Accordion("评审模版", open=False):
+    #     review_template_description = gr.Markdown("我们目前提供多种评审模版，你也可以根据需要在下方自行修改")
+    #     review_template_field = gr.Textbox(label=" ",lines=20, max_lines=20, autoscroll=False, value=REVIEW_FIELDS)
     generate_button = gr.Button("生成评审意见", interactive=not paper_text_field)
-    file_input.upload(process_file, file_input, paper_text_field)
-    paper_text_field.change(lambda text: gr.update(interactive=True) if len(text) > 200 else gr.update(interactive=False), paper_text_field, generate_button)
+    review_field = gr.Markdown("""<h1 align="center">评审意见</h1>""", label="评审意见",show_copy_button=True,container=True,show_label=True,max_height=10000)
 
-    review_field = gr.Markdown("\n\n\n\n\n", label="Review")
-    generate_button.click(fn=lambda: gr.update(interactive=False), inputs=None, outputs=generate_button).then(generate, [paper_text_field, review_template_field], review_field).then(fn=lambda: gr.update(interactive=True), inputs=None, outputs=generate_button)
+    file_input.upload(convert_file, file_input, paper_text_field)
+    paper_text_field.change(lambda text: gr.update(interactive=True) if len(text) > 200 else gr.update(interactive=False), paper_text_field, generate_button)
+    generate_button.click(fn=generate, inputs=[paper_text_field, review_style], outputs=review_field)
+    # generate_button.click(fn=lambda: gr.update(interactive=False), inputs=None, outputs=generate_button).then(generate, [paper_text_field, review_template_field], review_field).then(fn=lambda: gr.update(interactive=True), inputs=None, outputs=generate_button)
 
     demo.title = "PaperGuardian"
 
@@ -191,5 +193,6 @@ with gr.Blocks(theme=theme) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.queue()
+    demo.launch(share=True)
 
