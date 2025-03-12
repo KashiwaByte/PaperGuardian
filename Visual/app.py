@@ -21,7 +21,7 @@ import traceback
 metadata = {}
 
 # # prepare LLM
-# model_name = "maxidl/Llama-OpenReviewer-8B"
+# model_name = "maxidl/PaperGuardian"
 # model = AutoModelForCausalLM.from_pretrained(
 #     model_name,
 #     torch_dtype=torch.bfloat16,
@@ -154,37 +154,38 @@ def generate(paper_text, review_template):
 #DDDDDD silver below red
 #FFFDFA white
 
-title = """<h1 align="center">OpenReviewer</h1>
-<div align="center">Using <a href="https://huggingface.co/maxidl/Llama-OpenReviewer-8B" target="_blank"><code>Llama-OpenReviewer-8B</code></a> - Built with Llama</div>
+title = """<h1 align="center">PaperGuardian</h1>
+<div align="center">Using <a href="https://github.com/KashiwaByte/PaperGuardian" target="_blank"><code>PaperGuardian</code></a> - Built by Kashiwa</div>
 """
 
-description = """This is an online demo featuring [Llama-OpenReviewer-8B](https://huggingface.co/maxidl/Llama-OpenReviewer-8B), a large language model that generates high-quality reviews for machine learning and AI papers.
-## Demo Guidelines
-1. Upload you paper as a pdf file. Alternatively you can paste the full text of your paper in markdown format below. We do **not** store your data. User data is kept in ephemeral storage during processing.
-2. Once you upload a pdf it will be converted to markdown. This takes some time as it runs multiple transformer models to parse the layout and extract text and tables. Checkout [marker](https://github.com/VikParuchuri/marker/tree/master) for details.
-3. Having obtained a markdown version of your paper, you can now click *Generate Review*.
-Take a look at the Review Template to properly interpret the generated review. You can also change the review template before generating in case you want to generate a review with a different schema and aspects.
-To obtain more than one review, just generate again.
-**GPU quota:** If exceeded, either sign in with your HF account or come back later. Your quota has a half-life of 2 hours.
+description = """这是一个在线演示，展示的是 PaperGuardian，这是一个论文评审系统，能够为本科毕设和学术论文生成格式评审与高质量的内容评审。
+## 演示指南
+1.以 PDF或word 文件形式上传你的论文。我们不会存储你的数据。用户数据仅在处理过程中临时存储。  
+2.一旦你上传了文件，它将被转换为 Markdown 格式。这需要一些时间，因为系统会运行多个变换器模型来解析页面布局并提取文本和表格。详情请查看 [marker](https://github.com/VikParuchuri/marker/tree/master)。  
+3.在获得论文的 Markdown 版本后，你现在可以点击 “生成评审意见”。  
+4.我们目前只支持生成内容评审意见，后续将集成格式评审意见。  
+5.查看评审模板，以便正确解读生成的评审意见。如果你想以不同的架构和方面生成评审意见，也可以在生成之前更改评审模板。  
+6.若要获得多份评审意见，只需再次点击生成即可。  
 """
 
-theme = gr.themes.Default(primary_hue="gray", secondary_hue="blue", neutral_hue="slate")
+theme = gr.Theme.from_hub("hmb/amethyst")
+# theme = gr.themes.Default(primary_hue="gray", secondary_hue="blue", neutral_hue="slate")
 with gr.Blocks(theme=theme) as demo:
     title = gr.HTML(title)
     description = gr.Markdown(description)
     file_input = gr.File(file_types=[".pdf"], file_count="single")
-    paper_text_field= gr.Textbox("Upload a pdf or paste the full text of your paper in markdown format here.", label="Paper Text", lines=20, max_lines=20, autoscroll=False)
-    with gr.Accordion("Review Template", open=False):
-        review_template_description = gr.Markdown("We use the ICLR 2025 review template by default, but you can modify the template below as you like.")
+    paper_text_field= gr.Textbox("上传PDF或Word文件或粘贴论文的 Markdown 格式全文。", label="Paper Text", lines=20, max_lines=20, autoscroll=False)
+    with gr.Accordion("评审模版", open=False):
+        review_template_description = gr.Markdown("我们目前提供多种评审模版，你也可以根据需要在下方自行修改")
         review_template_field = gr.Textbox(label=" ",lines=20, max_lines=20, autoscroll=False, value=REVIEW_FIELDS)
-    generate_button = gr.Button("Generate Review", interactive=not paper_text_field)
+    generate_button = gr.Button("生成评审意见", interactive=not paper_text_field)
     file_input.upload(process_file, file_input, paper_text_field)
     paper_text_field.change(lambda text: gr.update(interactive=True) if len(text) > 200 else gr.update(interactive=False), paper_text_field, generate_button)
 
     review_field = gr.Markdown("\n\n\n\n\n", label="Review")
     generate_button.click(fn=lambda: gr.update(interactive=False), inputs=None, outputs=generate_button).then(generate, [paper_text_field, review_template_field], review_field).then(fn=lambda: gr.update(interactive=True), inputs=None, outputs=generate_button)
 
-    demo.title = "OpenReviewer"
+    demo.title = "PaperGuardian"
 
 
 
