@@ -172,20 +172,25 @@ theme = gr.Theme.from_hub("hmb/amethyst")
 with gr.Blocks(theme=theme) as demo:
     title = gr.HTML(title)
     description = gr.Markdown(description)
-    file_input = gr.File(file_types=[".pdf",".docx"], file_count="single")
-    paper_text_field= gr.Textbox("上传PDF或Word文件或粘贴论文的 Markdown 格式全文。", label="Paper Text", lines=20, max_lines=20, autoscroll=False,show_copy_button=True)
-    review_style =  gr.Dropdown(
-            ["Formal", "Encouraging", "Sharp","Academic"], label="评审风格", info="请选择你需要的评审风格")
-    # with gr.Accordion("评审模版", open=False):
-    #     review_template_description = gr.Markdown("我们目前提供多种评审模版，你也可以根据需要在下方自行修改")
-    #     review_template_field = gr.Textbox(label=" ",lines=20, max_lines=20, autoscroll=False, value=REVIEW_FIELDS)
-    generate_button = gr.Button("生成评审意见", interactive=not paper_text_field)
-    review_field = gr.Markdown("""<h1 align="center">评审意见</h1>""", label="评审意见",show_copy_button=True,container=True,show_label=True,max_height=10000)
+    with gr.Tab("内容评审"):
+        file_input = gr.File(file_types=[".pdf",".docx"], file_count="single")
+        paper_text_field= gr.Textbox("上传PDF或Word文件或粘贴论文的 Markdown 格式全文。", label="Paper Text", lines=20, max_lines=20, autoscroll=False,show_copy_button=True)
+        review_style =  gr.Dropdown(
+                ["Formal", "Encouraging", "Sharp","Academic"], label="评审风格", info="请选择你需要的评审风格")
+        # with gr.Accordion("评审模版", open=False):
+        #     review_template_description = gr.Markdown("我们目前提供多种评审模版，你也可以根据需要在下方自行修改")
+        #     review_template_field = gr.Textbox(label=" ",lines=20, max_lines=20, autoscroll=False, value=REVIEW_FIELDS)
+        generate_button = gr.Button("生成评审意见", interactive=not paper_text_field)
+        review_field = gr.Markdown("""<h1 align="center">评审意见</h1>""", label="评审意见",show_copy_button=True,container=True,show_label=True,max_height=10000)
 
-    file_input.upload(convert_file, file_input, paper_text_field)
-    paper_text_field.change(lambda text: gr.update(interactive=True) if len(text) > 200 else gr.update(interactive=False), paper_text_field, generate_button)
-    generate_button.click(fn=generate, inputs=[paper_text_field, review_style], outputs=review_field)
-    # generate_button.click(fn=lambda: gr.update(interactive=False), inputs=None, outputs=generate_button).then(generate, [paper_text_field, review_template_field], review_field).then(fn=lambda: gr.update(interactive=True), inputs=None, outputs=generate_button)
+        file_input.upload(convert_file, file_input, paper_text_field)
+        paper_text_field.change(lambda text: gr.update(interactive=True) if len(text) > 200 else gr.update(interactive=False), paper_text_field, generate_button)
+        generate_button.click(fn=generate, inputs=[paper_text_field, review_style], outputs=review_field)
+        # generate_button.click(fn=lambda: gr.update(interactive=False), inputs=None, outputs=generate_button).then(generate, [paper_text_field, review_template_field], review_field).then(fn=lambda: gr.update(interactive=True), inputs=None, outputs=generate_button)
+
+    with gr.Tab("格式评审"):
+        format_file_input = gr.File(file_types=[".pdf",".docx"], file_count="single")
+        format_paper_text_field= gr.Textbox("上传PDF", label="Paper Text", lines=20, max_lines=20, autoscroll=False,show_copy_button=True)
 
     demo.title = "PaperGuardian"
 
